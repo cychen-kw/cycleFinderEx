@@ -1,118 +1,51 @@
-import com.google.common.collect.Lists;
-import com.opencsv.CSVReader;
 import lombok.Data;
-import lombok.SneakyThrows;
 
-import java.io.FileReader;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Data
 public class Graph {
 
-    private List<Node> allNodes;
-
-    private Set<Cycle> cycles;
+    private List<Node> nodes;
 
     public Graph(Node... nodes) {
-        this.allNodes = Arrays.stream(nodes).sorted(Comparator.comparing(Node::getName)).collect(Collectors.toList());
+        this(Arrays.asList(nodes));
+    }
+
+    public void purge() {
+
+        boolean notDone = true;
+        while (notDone) {
+            notDone = nodes.removeIf(node -> node.getLinkedBy().size() == 0 || node.getLinkTo().size() == 0 || node.getCount() == 0);
+            if (notDone) {
+                for (Node node : nodes) {
+                    node.getLinkTo().removeIf(x -> !nodes.contains(x));
+                    node.getLinkedBy().removeIf(x -> !nodes.contains(x));
+                }
+            }
+        }
     }
 
     public Graph(List<Node> nodes) {
-        this.allNodes = nodes.stream().sorted(Comparator.comparing(Node::getName)).collect(Collectors.toList());
+        this.nodes = nodes.stream().sorted((n1, n2) -> {
+            String[] s1 = n1.getName().split("_");
+            String[] s2 = n2.getName().split("_");
+
+            if (s1[0].equals(s2[0])) {
+                return Integer.parseInt(s1[1]) - Integer.parseInt(s2[1]);
+            } else {
+                return Integer.parseInt(s1[0]) - Integer.parseInt(s2[0]);
+            }
+
+        }).collect(Collectors.toList());
     }
 
     public void printGraph() {
         System.out.println("Graph:");
-        for (Node n : allNodes) {
+        for (Node n : nodes) {
             n.printLinked();
         }
-    }
-
-    public Set<Cycle> findAllCycles() {
-        cycles = Collections.synchronizedSet(new HashSet<>());
-
-        List<Node> collect = allNodes.parallelStream().peek(n -> {
-            System.out.println("find target node:" + n);
-            for (Node v : n.getLinkedNodes()) {
-                findTarget(v, n, Collections.emptyList());
-            }
-        }).collect(Collectors.toList());
-//        for (Node n : allNodes) {
-//            for (Node v : n.getLinkedNodes()) {
-//                findTarget(v, n, Collections.emptyList());
-//            }
-//        }
-
-        return cycles;
-    }
-
-    private void findTarget(Node current, Node target, List<Node> visited) {
-
-        //System.out.println("current: " + current);
-        ArrayList<Node> newVisited = new ArrayList<>(visited);
-        newVisited.add(current);
-
-        if (current.equals(target)) {
-            cycles.add(new Cycle(newVisited));
-            //System.out.println(cycles);
-            return;
-        }
-
-        for (Node next : current.getLinkedNodes()) {
-            if (!visited.contains(next)) {
-                findTarget(next, target, newVisited);
-            }
-        }
-
-    }
-
-    @SneakyThrows
-    public static Graph readCsv(String filePath) {
-        List<List<String>> lines = new ArrayList<>();
-        try (CSVReader csvReader = new CSVReader(new FileReader(filePath));) {
-            String[] values = null;
-            while ((values = csvReader.readNext()) != null) {
-                lines.add(Arrays.asList(values));
-            }
-        }
-
-        Map<String, Node> nodeMap = new HashMap<>();
-        for (List<String> line : lines) {
-            String sourceName = line.get(0).trim();
-            if (sourceName.isEmpty()) {
-                break;
-            }
-            Node srcNode = new Node(sourceName);
-            nodeMap.put(sourceName, srcNode);
-        }
-
-        for (List<String> line : lines) {
-            String sourceName = line.get(0).trim();
-            Node srcNode = nodeMap.get(sourceName);
-            for (int i = 1; i < line.size(); i++) {
-                String name = line.get(i);
-                if (name.isEmpty()) {
-                    break;
-                }
-                Node node = nodeMap.get(name);
-                if(node != null){
-                    srcNode.link(node);
-                }
-            }
-        }
-
-        return new Graph(Lists.newArrayList(nodeMap.values()));
     }
 
 }

@@ -11,6 +11,7 @@ public class Cycle {
 
     public Cycle(List<Node> nodes) {
         this.nodes = nodes;
+        nodes.forEach(Node::deCount);
     }
 
     @Override
