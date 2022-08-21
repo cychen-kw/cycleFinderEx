@@ -1,20 +1,22 @@
-import com.google.common.collect.Streams;
-
-import java.util.Set;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class Main {
 
-
     public static void main(String[] args) {
 
-        Graph graph = Graph.readCsv("/Users/chienyu/IdeaProjects/cycleFinderEx/src/main/resources/event.csv");
+        Graph graph = GraphReader.readCsv("src/main/resources/event.csv");
 
+        System.out.println("Origin graph:");
+        graph.printGraph();
+        graph.purge();
+        System.out.println("after purged:");
         graph.printGraph();
 
-        Set<Cycle> allCycles = graph.findAllCycles();
-        Streams.mapWithIndex(allCycles.stream(),
-                        (str, index) -> (index + 1) + ": " + str)
-                .forEach(System.out::println);
+        CycleFinder cycleFinder = new CycleFinder();
+        List<Cycle> cycles = cycleFinder.findCycles(graph);
+        cycles.forEach(System.out::println);
 
 //        Node a = new Node("A");
 //        Node b = new Node("B");
